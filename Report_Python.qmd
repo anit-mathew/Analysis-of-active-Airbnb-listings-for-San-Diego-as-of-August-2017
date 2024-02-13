@@ -1,0 +1,504 @@
+---
+title: "Analysis of active Airbnb listings for San Diego as of August 2017."
+author:   
+  - Anit Mathew 
+format: 
+    pdf:
+      toc: true
+      page-layout: full
+      toc-location: left
+      pdf-math-method: katex
+jupyter: python3
+execute: 
+  warning: false
+---
+## Introduction
+
+Airbnb has been a leading competitor in the travel industry. It has provided an integrated platform to the host and their customers to have a convenient experience of hosting and staying. The larger idea behind the business is that it allows residents to list a room in their house to travelers and earn additional revenue. However, while listing or booking a stay, many factors lead to attracting more customers or looking for cheaper places to stay. In this project, we will analyze what factors lead to an increase or decrease in the price of a listing and what major factor a customer looks into while booking the cheapest option. I travel a lot, and I browse a lot on Airbnb for cheaper options with certain amenities. I am curious to know if there is a relationship between amenities and prices and what major factors or amenities lead to price change through this dataset. 
+
+The queries that we would be researching will be as follows: 
+
+1. What are the major factors in the increase or decrease according to room type, bedroom, and accommodation in prices of any listing?
+2. Does the neighborhood of San Diego affect the pricing of the listings? Which neighborhood has the highest average price? Demonstrating it on a map and analyzing it. 
+3. Is there any relation between prices and the amenities like 'bedrooms', 'room_type', 'reviews', 'overall_satisfaction',and 'accommodates'? How reliable is the relationship? Can we depend on them to make a prediction?
+
+### Dataset
+
+The dataset has been collected over the course of 4 years by Tom Slee. Tom Slee has not just collected data for San Diego but for all major cities around the globe.
+
+Link:https://tomslee.net/category/airbnb-data
+        
+1. room_id- A unique number that identifies an Airbnb listing.
+2. host_id- A unique number that identifies an Airbnb host.
+3. room_type- Divided into 3 types “Entire home/apt”, “Private room”, or “Shared room”
+4. neighborhood- As with borough a subregion of the city or search area for which the survey is carried out. For cities that have both, a neighborhood is smaller than a borough. In some cities, there is no neighborhood information.
+5. reviews- Total number of reviews that a listing has received.
+6. overall_satisfaction- The average rating (out of five) a listing has received from its visitors.
+7. accommodates- Total number of guests a listing can accommodate.
+8. bedrooms- Number of bedrooms a listing has.
+
+```{python}
+#| echo: False
+# importing required libraries
+import pandas as pd
+import seaborn as sb
+import matplotlib.pyplot as plt
+import numpy as np
+
+# reading the dataset
+df = pd.read_csv('dataset.csv')
+temp = df.head(5) # displaying the data
+print(temp)
+
+```
+
+## Methodology
+
+The data collected by Tom Slee was easy to download from the website. Upon looking at the dataset, it was hard to understand. 
+
+- Data Cleaning: 
+The data contained more than 5000 records which included columns which had no values. To start with the research, it was important to clean the data. So, removed all the columns like countries, bathrooms and, boroughs. 
+
+```{python}
+#| echo: False
+# To convert NaN values to 0 for preparation for Modelling
+df = df.fillna(0)
+# Checking to ensure that there are no NULL entries
+result = df.isnull().sum()
+count = 0
+for item in result:
+    if item != 0:
+        count += 1
+if count == 0:
+    print("Data is cleaned and has no null values")        
+else:
+    print("Data has null values")
+```
+
+
+- For analyzing the prices in relation to variables like bedroom, room type, accommodation, we extracted the particular columns. First, we counted the number of listings according to room type, bedroom, and accommodation. It is very important to look into the count to have a better understanding of its relationship with the price. Thereafter, we calculated the average price in relation to every amenity which the listing has to offer. The analysis is done by plotting the results on bar charts to have a clear picture and understanding. 
+
+- If we need to rent an Airbnb, which place would be the best in the city - the central area or the beach area? Figuring out the answer might be difficult because every listing has a different price range. To better understand the pricing of each neighborhood, we grouped the dataset according to the neighborhood and calculated the average price for each neighborhood. To our surprise, we got 102 neighborhoods in the city of San Diego. It would be hard to plot the results over a bar chart, as the data is vast. So, we decided to plot the result over a map. The average pricing data was plotted over the map using latitude and longitude over the neighborhood. This gave us a clear picture to analyze which neighborhood is expensive and which is cheap. 
+
+- Do the amenities of the listing have any influence on the pricing? Which amenity has a larger influence on price? To answer these questions, we checked out whether there is any relationship between the amenities and pricing. We performed this analysis using 'Machine Learning'. We processed the data using label encoding so that labels could be converted into numeric form to make machine-readable. We performed Multiple Linear Regression and Random Forest Regression on the dataset to find how strong the relationship is and which feature is the most important. 
+
+
+## Results
+
+Visual analysis of the listing. 
+
+### Price relation with room type
+
+```{python}
+#| echo: False
+'''
+Code to count number of listing and calculating average prices for type of listing. 
+Also, to plot the results on a bar plot. 
+
+'''
+# plotting number of listings per room type. 
+plot1 = df[['room_type', 'price']]
+# calculating average of prices and plotting the listings per room type. 
+fig, axes = plt.subplots(nrows=1, ncols=2)
+# plotting barplot of number of listings per room type
+num_list_plot = plot1['room_type'].value_counts().plot(kind='bar', figsize=(10, 4), rot=0, ax=axes[0], color=["orange", "green", "blue"])
+# to display the count over every bar
+for i in num_list_plot.containers:
+    num_list_plot.bar_label(i,)
+# labeling x axis
+axes[0].set_xlabel("room_type")
+# labeling y axis
+axes[0].set_ylabel("count")
+# plot title
+axes[0].set_title("Number of listings per room type")
+# plotting barplot of average per per room type
+bp = sb.barplot(ax=axes[1], x='room_type', y='price', data=plot1, ci=False)
+# to display the count over every bar
+for i in bp.containers:
+    bp.bar_label(i,)
+# plot title
+axes[1].set_title("Average price per room type")
+# saving plot
+plt.savefig('Number of listings per room type.png', bbox_inches='tight')
+plt.show()
+
+```
+
+As per the first plot, entire home/apt has 6179, private room has 2704 and shared room has 228 listings throughout San Diego. Thereafter, while plotting average prices of listings as per room type. We found that entire home/apt has an average price of $258.562227, private room has an average price of $79.586908 and shared room has an average price of $50.482456. 
+
+Looking at the figures and plots, it is easily acceptable that entire home listings which are in majority have the highest average price, and shared room listings have the lowest average prices. We can analyze that here the price is in direct relation to the number of listings. The more the listing, the higher the average. 
+
+### Price relation with number of bedrooms. 
+
+
+```{python}
+#| echo: False
+'''
+Code to count number of listing and calculating average prices as per number of bedrooms. 
+Also, to plot the results on a bar plot. 
+
+'''
+plot2 = df[['bedrooms', 'price']]
+# calculating average of prices and plotting the listings per number of bedroom. 
+fig, axes = plt.subplots(nrows=1, ncols=2)
+# plotting barplot of number of listings per bedroom
+plt_num_bedrooms = plot2['bedrooms'].value_counts().plot(kind='bar', figsize=(13, 6), rot=0, ax=axes[0])
+# to display the count over every bar
+for i in plt_num_bedrooms.containers:
+    plt_num_bedrooms.bar_label(i,)
+# labeling x axis
+axes[0].set_xlabel("number of bedrooms")
+# labeling y axis
+axes[0].set_ylabel("count")
+# setting title
+axes[0].set_title("Number of listings per bedroom")
+# plotting barplot of average of prices per number of bedroom
+bp_bedrooms = sb.barplot(ax=axes[1], x='bedrooms', y='price', data=plot2, ci=False)
+# to display the count over every bar
+for i in bp_bedrooms.containers:
+    bp_bedrooms.bar_label(i,)
+# setting title
+axes[1].set_title("average of prices per number of bedroom")
+# saving plot
+plt.savefig('Number of listings vs bedrooom.png', bbox_inches='tight')
+plt.show()
+```
+
+In the first plot, listings with 1 bedroom have the highest number with 4748, and listings with 10 bedrooms have the lowest count of 2 listings in San Diego. 
+
+Further, while analyzing the second plot, listings which has the highest number of count, has the lowest average prices which is hard to believe. Along with that, the 2 listings which have 10 bedrooms have the highest average price in the city. By looking at the plot, we can analyze that the average prices of the listings increase with the increase in the number of bedrooms. The price has a direct relation with the number of bedrooms. 
+
+### Price relation with number of accommodation. 
+
+
+```{python}
+#| echo: False
+'''
+Code to count number of listing and calculating average prices as per number of accommodation. 
+Also, to plot the results on a bar plot. 
+
+'''
+
+plot3 = df[['accommodates', 'price']]
+# calculating average of prices and plotting the listings per number of bedroom. 
+fig, axes = plt.subplots(nrows=1, ncols=2)
+# plotting barplot of number of listings per bedroom
+acc_plots = plot3['accommodates'].value_counts().plot(kind='bar', figsize=(15, 5), rot=0, ax=axes[0])
+# to display the count over every bar
+for i in acc_plots.containers:
+    acc_plots.bar_label(i,)
+# labeling x axis
+axes[0].set_xlabel("accommodation")
+# labeling y axis
+axes[0].set_ylabel("count")
+# setting title
+axes[0].set_title("Number of listings per accommodation")
+# plotting barplot for average of prices per number of accommodation
+bp_aco = sb.barplot(ax=axes[1], x='accommodates', y='price', data=plot3, ci=False)
+# setting title
+axes[1].set_title("Average of prices per number of accommodation")
+# saving file
+plt.savefig('Number of listings vs accommodation.png', bbox_inches='tight')
+plt.show()
+```
+
+
+In the first plot, listings that can accommodate 2 people have the highest number with 2906, and listings that can accommodate 21 and 22 people have the lowest count with just 1 listing. Looking at the plot the listings are pretty scattered, listings with even number of accommodations are more compared to the odd ones. But the interesting factor in the second plot is, no matter what the number of accommodations of the listing is, the average price is increasing with the increase in the number of accommodations. Though the count of listing with 20 people is the lowest, the average price is the highest which is more than $2000. 
+
+All the above listing gives us an overview of whether the price is related to the amenities provided by the listings. Looking at the plots above we can distinguish that prices are related to the space and amenities they provide. If we need a big sized apartment with more rooms and accommodation, we may need to pay more. To better understand the scenario, we tried to plot the average price with the number of bedrooms for each type of listing. 
+
+```{python}
+#| echo: False
+# plot the average price with number of bedrooms for each type of listing
+fig, axes = plt.subplots(nrows=1, ncols=2)
+h1 = sb.heatmap(df.groupby(['bedrooms','room_type']).price.mean().unstack(), annot=True, fmt=".0f", cmap = sb.cm.rocket_r, cbar_kws={'label': 'mean_price'}, ax=axes[0])
+axes[0].set_title('AVG price with bedroom for each type of listing')
+h2 = sb.heatmap(df.groupby(['accommodates','room_type']).price.mean().unstack(), annot=True, fmt=".0f", cmap = sb.cm.rocket_r, cbar_kws={'label': 'mean_price'}, ax=axes[1])
+axes[1].set_title('AVG price with accommodation for each type of listing')
+plt.savefig('Average price with bedrooms and accommodation for each type of listing.png')
+plt.subplots_adjust(left=0.1,
+                    bottom=0.1,
+                    right=1.5,
+                    wspace=0.4,
+                    hspace=1)
+plt.show()
+```
+
+With the above heat map, we get an in-depth idea of average pricing. The shared room has the lowest count in the city with only 1 bedroom and several accommodations. Its price is also at an average of $50 which is the cheapest option in the whole set. The relation that we get here is that as the listings shift from shared room(right) to entire home/apt(left), the average price also tends to increase. And as the number of bedroom and accommodation increases, the average price also tends to increase. 
+
+So, we can conclude by analyzing the plots once again that if we need a big sized apartment with more rooms and accommodation, we may need to pay more. 
+
+### Price relation with neighborhood
+
+ Neighborhood is a major factor when renting an Airbnb facility. Should I be getting a place in the city or by the beach? Which place would be the cheapest? Will a beach house be expensive? These are the major questions that arise in our thoughts. The question here is what is the price change according to the neighborhood?
+
+
+
+```{python}
+#| echo: False
+'''
+To count number of listing and calculating average prices as per number of neighborhood. 
+Also, to plot the results on a bar plot and map. 
+'''
+# importing libraries
+import plotly.express as px
+import pandas as pd
+# collecting required data
+nmap = df[['neighborhood', 'price', 'latitude', 'longitude']]
+# sorting neighborhood on the basis price
+nmap = nmap.sort_values('price')
+nmap = nmap.groupby('neighborhood', as_index=False)['price','latitude', 'longitude'].mean()
+```
+
+
+With 102 neighborhoods, it is hard to understand which neighborhood has the highest price. So, we tried to plot listings on a map. Average prices for every neighborhood on the map provide a better understanding. By looking at the plot, we can understand that majority of neighborhoods have an average price below 250 but as we move to the coastal areas, the average price increases. Torrey Pines which is near the beach has the highest average price which reaches up to $506. This provides us with a clear indication that the listings near the beach in San Diego are expensive compared to the ones which are in the city. 
+
+```{python}
+#| echo: False
+#| output: false
+# plotting the average price per neighbourhood data on intercative map. 
+color_scale = [(0, 'green'), (1,'red')]
+plt.figure(figsize=(15,15))
+fig = px.scatter_mapbox(nmap, lat="latitude", lon="longitude", hover_name="neighborhood", hover_data=["price"],color="price", color_continuous_scale=color_scale, size="price", zoom=8, height=1200, width=1200)
+fig.update_layout(mapbox_style="open-street-map")
+fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+fig.show()
+```
+::: {layout="[1]"}
+
+![Average price per neighbourhood data](Map_plot.png){width=30%, fig-align="center"}
+
+:::
+### Machine Learning
+ 
+ 
+#### Multiple Linear Regression model
+
+Multiple Linear Regression model is a model that helps to determine a relationship between quantitative dependent variables with two or more independent variables in a straight line. In other words, we will be using this model to establish whether there is a relationship between price and  amenities. We have fit the model as price = a * (Predictor variable) + b. 
+
+```{python}
+
+#| echo: False
+#| output: false
+# Basic Libraries
+import pandas as pd
+import seaborn as sb
+import numpy as np
+
+import matplotlib.pyplot as plt # we only need pyplot
+sb.set() # set the default Seaborn style for graphics
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Libraries used for Modelling
+from sklearn import linear_model
+from sklearn import preprocessing
+from sklearn.metrics import r2_score
+from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+
+# reading the dataset
+df =  pd.read_csv('dataset.csv')
+df = df[['room_type','bedrooms','price','reviews','overall_satisfaction', 'accommodates', 'latitude', 'longitude']]
+# performing label encoding so that labels could be converted into numeric form to make machine readable
+le = preprocessing.LabelEncoder()
+df = df.apply(le.fit_transform)
+df.head()
+
+# To convert NaN values to 0 for preparation for Modelling
+newdf = df.fillna(0)
+# Checking to ensure that there are no NULL entries
+newdf.isnull().sum()
+
+# Separating X and y for Modelling
+X = pd.DataFrame(df[["bedrooms", "room_type",'reviews', 'overall_satisfaction','accommodates']]) #Predictor Variable
+y = pd.DataFrame(df["price"]) #Response Variable
+
+# Scaling
+scaler = StandardScaler()
+X = pd.DataFrame(scaler.fit_transform(X), columns=list(X.columns))
+# sppliitng the dataset into training and testing 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# Creating and fitting the model
+linreg = linear_model.LinearRegression()     
+linreg.fit(X_train, y_train)
+
+# Coefficients of the Linear Regression line
+print('Intercept of Regression \t: b = ', linreg.intercept_)
+print()
+
+# Print the Coefficients against Predictors
+print(pd.DataFrame(list(zip(X_train.columns, linreg.coef_[0])), columns = ["Predictors", "Coefficients"]))
+print()
+
+# Predict Response corresponding to Predictors
+trainPredictionLR = linreg.predict(X_train)
+testPredictionLR = linreg.predict(X_test)
+```
+
+```{python}
+#| echo: False
+# Plot the Predictions vs the True values
+f, axes = plt.subplots(1, 2, figsize=(24, 12))
+axes[0].scatter(y_train, trainPredictionLR, color = "blue")
+axes[0].plot(y_train, y_train, 'g-', linewidth = 5)
+axes[0].set_xlabel("True values of the Response Variable (Train)", fontsize=20)
+axes[0].set_ylabel("Predicted values of the Response Variable (Train)", fontsize=20)
+axes[0].set_title("Linear model of training set", fontsize=25)
+axes[1].scatter(y_test, testPredictionLR, color = "red")
+axes[1].plot(y_test, y_test, 'g-', linewidth = 5)
+axes[1].set_xlabel("True values of the Response Variable (Test)", fontsize=20)
+axes[1].set_ylabel("Predicted values of the Response Variable (Test)", fontsize=20)
+axes[1].set_title("Linear model of test set", fontsize=25)
+plt.savefig("Linearmodel.png")
+```
+
+
+Points that lie on or near the diagonal line imply that the values predicted by the Linear Regression Model are highly accurate. The plot suggests that it has an R-squareed value of 0.63 which means it has an accuracy of 63%. 
+
+```{python}
+#| echo: False
+#| output: false
+#add constant to predictor variables
+x = sm.add_constant(X)
+#fit linear regression model
+model = sm.OLS(y, x).fit()
+#view model summary
+print(model.summary())
+```
+
+```{python}
+#| echo: False
+#display adjusted R-squared
+print("The adjusted R-squared is : ",1 - (1-linreg.score(X, y))*(len(y)-1)/(len(y)-X.shape[1]-1))
+```
+
+
+#### Random Forest Regression
+
+Random Forest Regression is a model that uses an ensemble learning method for regression. It is a technique that combines predictions from multiple machine learning algorithms to make a more accurate prediction than a single model. 
+In this model, we will be predicting the price and also finding out the most important variable. The importance of a variable depicts how useful is that variable in building up the model accurately. 
+
+
+```{python}
+#| echo: False
+#| output: false
+# Basic Libraries
+import numpy as np
+import pandas as pd
+import seaborn as sb
+
+import matplotlib.pyplot as plt # we only need pyplot
+sb.set() # set the default Seaborn style for graphics
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+
+# Libraries used for Modelling
+from sklearn import linear_model
+import statsmodels.api as sm
+
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import preprocessing
+
+df =  pd.read_csv('dataset.csv')
+df = df[['room_type','bedrooms','price','reviews','overall_satisfaction', 'accommodates', 'latitude', 'longitude']]
+df.head()
+
+le = preprocessing.LabelEncoder()
+df = df.apply(le.fit_transform)
+df.head()
+
+# To convert NaN values to 0 for preparation for Modelling
+newdf = df.fillna(0)
+# Checking to ensure that there are no NULL entries
+newdf.isnull().sum()
+
+# Separating X and y for Modelling
+X = pd.DataFrame(df[["bedrooms", "room_type",'reviews', 'overall_satisfaction','accommodates']]) #Predictor Variable
+y = pd.DataFrame(df["price"]) #Response Variable
+
+# Scaling
+scaler = StandardScaler()
+X = pd.DataFrame(scaler.fit_transform(X), columns=list(X.columns))
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+# Creating and fitting the model
+RF = RandomForestRegressor(n_estimators=2000, max_depth=40,min_samples_split = 50,
+                           max_leaf_nodes = 70,max_features = 5).fit(X_train,y_train)
+
+# Predicting the training and testing sets
+trainPredictin_RF = RF.predict(X_train)
+testPredictin_RF =RF.predict(X_test)
+
+# calculating the weight of the features.
+importancesRF = RF.feature_importances_
+feat_imp1 = pd.DataFrame(importancesRF, columns=['Weight'], index=X_train.columns)
+feat_imp1.sort_values('Weight', inplace=True)
+feat_imp1
+
+feat_imp = pd.DataFrame({'importance':RF.feature_importances_})  
+feat_imp['feature'] = X_train.columns
+feat_imp.sort_values(by='importance', ascending=False, inplace=True)
+
+feat_imp.sort_values(by='importance', inplace=True)
+feat_imp = feat_imp.set_index('feature', drop=True)
+```
+
+
+The above plot provides the information that the bedroom variable has the highest importance with more than 70% rate. The rest of the variables like room_type, reviews, accommodation, and overall satisfaction has an importance of 0 to 10%. 
+
+```{python}
+#| echo: False
+# plotting importance of features  
+feat_imp.plot.barh(figsize=(4,4))
+plt.xlabel('Feature Importance Score')
+plt.title('Feature Importance Score Plot')
+plt.savefig("Randomforest_variableplot")
+plt.show()
+
+# Plotting the model 
+f, axes = plt.subplots(1, 2, figsize=(24, 12))
+axes[0].scatter(y_train, trainPredictin_RF, color = "blue")
+axes[0].plot(y_train, y_train, 'g-', linewidth = 5)
+axes[0].set_xlabel("True values of the Response Variable (Train)")
+axes[0].set_ylabel("Predicted values of the Response Variable (Train)")
+axes[0].set_title("Linear model of test set")
+axes[1].scatter(y_test, testPredictin_RF, color = "red")
+axes[1].plot(y_test, y_test, 'g-', linewidth = 5)
+axes[1].set_xlabel("True values of the Response Variable (Test)", fontsize=18)
+axes[1].set_ylabel("Predicted values of the Response Variable (Test)", fontsize=18)
+axes[1].set_title("Linear model of test set")
+plt.savefig("Randomforest_ML.png")
+
+# getting r square value. 
+from sklearn.metrics import r2_score
+print("The R square value of the model : ", r2_score(y_test, testPredictin_RF))
+
+
+```
+
+
+Points that lie on or near the diagonal line mean that the values predicted by the Linear Regression model are highly accurate. The plot suggests that it has an R-squared value of 0.65 which means it has an accuracy of 65% which is a little better than the linear model. 
+
+Therefore after analyzing both models, we can conclude that the predictor variables do have an influence on the price level and the bedroom has the highest influence compared to all other amenities. 
+
+## Discussion
+
+With all the insight received from the exploratory analysis and machine learning models, we can conclude that: 
+
+- Bedroom has the highest influence on price. With the increase in the number of bedrooms, the price level also increases. 
+- San Diego has more number of entire properties listed comparatively which have the highest price level.
+- Listings near to the beach areas attract higher prices compared to listings in the city area. 
+- Torrey Pines has the highest average price compared to all 102 neighborhoods.
+- Reviews and overall satisfaction ratings do not have much effect on price. 
+- There is a less but positive relationship between review and price system. It has less than 10% of importance, so the feedback system cannot be relied on to predict the price. 
+
+The main limitation of this dataset is the fewer amount variables which makes it difficult to reach an accuracy of more than 70%. Both the Regression models provide a R-squared value of around 65% which could have been better if it was more than 70%. One way to reach that goal is to add more data which will provide us with more insight into the data. There can be more factors to an Airbnb listing such as washrooms, air conditioner, refrigerator, hot water, parking facility, etc. which can enhance the strength of the model and helps to analyze the relationship with price in depth. If we need to work on this future, a dataset with more features will need to be procured. 
+
+## Citiations 
+
+* Dataset : https://tomslee.net/category/airbnb-data
+    + Author: Tom Slee
+    + Year of Publication: October 9, 2017
