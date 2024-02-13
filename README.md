@@ -22,7 +22,7 @@ This repository contains an in-depth analysis of active Airbnb listings in San D
 
 ## How to Use:
 
-- The Jupyter Notebook (`Airbnb_SanDiego_Analysis.ipynb`) contains the complete code and detailed analysis.
+- The Jupyter Notebooks contains the complete code and detailed analysis.
 - Data cleaning steps are outlined in the notebook, and visualizations are provided for better understanding.
 - Machine learning models and their results are included in the notebook.
 
